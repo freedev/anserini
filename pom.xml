@@ -26,7 +26,7 @@
   </developers>
 
   <properties>
-    <lucene.version>8.3.0</lucene.version>
+    <lucene.version>8.5.2</lucene.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -297,6 +297,12 @@
       <groupId>org.apache.solr</groupId>
       <artifactId>solr-solrj</artifactId>
       <version>${lucene.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.solr</groupId>
+      <artifactId>solr-core</artifactId>
+      <version>${lucene.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.elasticsearch.client</groupId>
