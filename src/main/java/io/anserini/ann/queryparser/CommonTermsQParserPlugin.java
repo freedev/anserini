@@ -6,28 +6,33 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.CommonTermsQuery;
 import org.apache.lucene.search.Query;
+import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.search.QParser;
 import org.apache.solr.search.QParserPlugin;
-import org.apache.solr.search.SyntaxError;
+
+import java.util.Optional;
 
 import static org.apache.lucene.search.BooleanClause.Occur.SHOULD;
 
 public class CommonTermsQParserPlugin extends QParserPlugin {
 
+    private static final String DEPTH_CONFIG_PARAM_NAME = "depth";
     private static final String MAX_TERM_FREQUENCY_CONFIG_PARAM_NAME = "cutoff";
     private static final String MSM_CONFIG_PARAM_NAME = "msm";
     private static final String QUANTIZIER_CONFIG_PARAM_NAME = "q";
     private static final float DEFAULT_MAX_TERM_FREQUENCY = 0.01F;
     private static final int DEFAULT_QUANTIZATION_FACTOR = 60;
+    private static final int DEFAULT_DEPTH = 10;
     private Analyzer vectorAnalyzer;
 
-//    private float maxTermFrequency = DEFAULT_MAX_TERM_FREQUENCY;
+    //    private float maxTermFrequency = DEFAULT_MAX_TERM_FREQUENCY;
     private float cutoff = DEFAULT_MAX_TERM_FREQUENCY;
     private int q = DEFAULT_QUANTIZATION_FACTOR;
     private float msm = 0f;
+    private int depth = DEFAULT_DEPTH;
 
     @Override
     public void init(NamedList args) {
@@ -37,6 +42,10 @@ public class CommonTermsQParserPlugin extends QParserPlugin {
         final Integer q = params.getInt(QUANTIZIER_CONFIG_PARAM_NAME);
         if (q != null) {
             this.q = q;
+        }
+        final Integer depth = params.getInt(DEPTH_CONFIG_PARAM_NAME);
+        if (depth != null) {
+            this.depth = depth;
         }
         final Float maxTermFrequency = params.getFloat(MAX_TERM_FREQUENCY_CONFIG_PARAM_NAME);
         if (maxTermFrequency != null) {
@@ -51,12 +60,17 @@ public class CommonTermsQParserPlugin extends QParserPlugin {
 
     @Override
     public QParser createParser(final String queryString, SolrParams localParams, SolrParams params, SolrQueryRequest req) {
+
         return new QParser(queryString, localParams, params, req) {
 
             @Override
-            public Query parse() throws SyntaxError {
-                String queryField = localParams.get("qf");
-                String queryValue = localParams.get("v");
+            public Query parse() throws SolrException {
+
+                String queryField = Optional.ofNullable(localParams.get("qf"))
+                                            .orElseThrow(() -> new SolrException(SolrException.ErrorCode.BAD_REQUEST, "qf parameter is mandatory"));
+
+                String queryValue = Optional.ofNullable(localParams.get("v"))
+                                            .orElseThrow(() -> new SolrException(SolrException.ErrorCode.BAD_REQUEST, "v parameter is mandatory"));
                 CommonTermsQuery commonTermsQuery = new CommonTermsQuery(SHOULD, SHOULD, cutoff);
                 for (String token : AnalyzerUtils.analyze(vectorAnalyzer, queryValue)) {
                     commonTermsQuery.add(new Term(queryField, token));
@@ -65,6 +79,15 @@ public class CommonTermsQParserPlugin extends QParserPlugin {
                     commonTermsQuery.setHighFreqMinimumNumberShouldMatch(msm);
                     commonTermsQuery.setLowFreqMinimumNumberShouldMatch(msm);
                 }
+
+//                TopScoreDocCollector results = TopScoreDocCollector.create(depth, Integer.MAX_VALUE);
+//
+//                try {
+//                    req.getSearcher().search(commonTermsQuery, results);
+//                } catch (IOException e) {
+//                    throw new RuntimeException(e);
+//                }
+
                 return commonTermsQuery;
             }
         };
