@@ -66,12 +66,12 @@ public class CommonTermsQParserPlugin extends QParserPlugin {
             @Override
             public Query parse() throws SolrException {
 
-                String queryField = Optional.ofNullable(localParams.get("qf"))
+                final String queryField = Optional.ofNullable(localParams.get("qf"))
                                             .orElseThrow(() -> new SolrException(SolrException.ErrorCode.BAD_REQUEST, "qf parameter is mandatory"));
 
-                String queryValue = Optional.ofNullable(localParams.get("v"))
+                final String queryValue = Optional.ofNullable(localParams.get("v"))
                                             .orElseThrow(() -> new SolrException(SolrException.ErrorCode.BAD_REQUEST, "v parameter is mandatory"));
-                CommonTermsQuery commonTermsQuery = new CommonTermsQuery(SHOULD, SHOULD, cutoff);
+                final CommonTermsQuery commonTermsQuery = new CommonTermsQuery(SHOULD, SHOULD, cutoff);
                 for (String token : AnalyzerUtils.analyze(vectorAnalyzer, queryValue)) {
                     commonTermsQuery.add(new Term(queryField, token));
                 }
