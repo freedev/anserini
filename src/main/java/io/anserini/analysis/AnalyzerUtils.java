@@ -16,7 +16,6 @@
 
 package io.anserini.analysis;
 
-import io.anserini.index.IndexCollection;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -28,9 +27,6 @@ import java.util.List;
 
 public class AnalyzerUtils {
 
-  static public List<String> analyze(String s) {
-    return analyze(IndexCollection.DEFAULT_ANALYZER, s);
-  }
 
   static public List<String> analyze(Analyzer analyzer, String s) {
     List<String> list = new ArrayList<>();
