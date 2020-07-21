@@ -2,6 +2,7 @@ package io.anserini.ann.queryparser;
 
 import io.anserini.analysis.AnalyzerUtils;
 import io.anserini.ann.fw.FakeWordsEncoderAnalyzer;
+import io.anserini.ann.lexlsh.LexicalLshAnalyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queries.CommonTermsQuery;
@@ -17,11 +18,12 @@ import java.util.Optional;
 
 import static org.apache.lucene.search.BooleanClause.Occur.SHOULD;
 
-public class CommonTermsQParserPlugin extends QParserPlugin {
+public class AnnQParserPlugin extends QParserPlugin {
 
     private static final String DEPTH_CONFIG_PARAM_NAME = "depth";
     private static final String MAX_TERM_FREQUENCY_CONFIG_PARAM_NAME = "cutoff";
     private static final String MSM_CONFIG_PARAM_NAME = "msm";
+    private static final String ANALYZER_CONFIG_PARAM_NAME = "analyzer";
     private static final String QUANTIZIER_CONFIG_PARAM_NAME = "q";
     private static final float DEFAULT_MAX_TERM_FREQUENCY = 0.01F;
     private static final int DEFAULT_QUANTIZATION_FACTOR = 60;
@@ -55,7 +57,16 @@ public class CommonTermsQParserPlugin extends QParserPlugin {
         if (msm != null) {
             this.msm = msm;
         }
-        this.vectorAnalyzer = new FakeWordsEncoderAnalyzer(this.q);
+        final String analyzer = params.get(ANALYZER_CONFIG_PARAM_NAME, "fw");
+        if (analyzer != null) {
+            if (analyzer.equalsIgnoreCase("fw")) {
+                this.vectorAnalyzer = new FakeWordsEncoderAnalyzer(this.q);
+            } else if (analyzer.equalsIgnoreCase("lexlsh")) {
+                this.vectorAnalyzer = new LexicalLshAnalyzer();
+            } else {
+                throw new IllegalArgumentException("missing " + ANALYZER_CONFIG_PARAM_NAME + " parameter");
+            }
+        }
     }
 
     @Override
@@ -67,10 +78,10 @@ public class CommonTermsQParserPlugin extends QParserPlugin {
             public Query parse() throws SolrException {
 
                 final String queryField = Optional.ofNullable(localParams.get("qf"))
-                                            .orElseThrow(() -> new SolrException(SolrException.ErrorCode.BAD_REQUEST, "qf parameter is mandatory"));
+                                                  .orElseThrow(() -> new SolrException(SolrException.ErrorCode.BAD_REQUEST, "qf parameter is mandatory"));
 
                 final String queryValue = Optional.ofNullable(localParams.get("v"))
-                                            .orElseThrow(() -> new SolrException(SolrException.ErrorCode.BAD_REQUEST, "v parameter is mandatory"));
+                                                  .orElseThrow(() -> new SolrException(SolrException.ErrorCode.BAD_REQUEST, "v parameter is mandatory"));
                 final CommonTermsQuery commonTermsQuery = new CommonTermsQuery(SHOULD, SHOULD, cutoff);
                 for (String token : AnalyzerUtils.analyze(vectorAnalyzer, queryValue)) {
                     commonTermsQuery.add(new Term(queryField, token));
@@ -87,6 +98,14 @@ public class CommonTermsQParserPlugin extends QParserPlugin {
 //                } catch (IOException e) {
 //                    throw new RuntimeException(e);
 //                }
+
+//                SolrParams computedLocalParams = new ModifiableSolrParams(localParams)
+//                        .set(ReRankQParserPlugin.RERANK_QUERY, "{!vp f=" + field + " vector=\"" + vector + "\" lsh=\"false\"}")
+//                        .setNonNull(ReRankQParserPlugin.RERANK_WEIGHT, reRankWeight)
+//                        .set("q", lshQuery);
+//                return ((AbstractReRankQuery) req.getCore().getQueryPlugin(ReRankQParserPlugin.NAME).
+//                                                 .createParser(lshQuery, computedLocalParams, params, req)
+//                                                 .getQuery()).wrap(commonTermsQuery);
 
                 return commonTermsQuery;
             }
