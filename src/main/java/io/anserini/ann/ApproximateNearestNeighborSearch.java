@@ -183,7 +183,7 @@ public class ApproximateNearestNeighborSearch {
       }
 
       long start = System.currentTimeMillis();
-      TopScoreDocCollector results = TopScoreDocCollector.create(indexArgs.depth, Integer.MAX_VALUE);
+      TopScoreDocCollector results = TopScoreDocCollector.create(indexArgs.depth);
       searcher.search(simQuery, results);
       long time = System.currentTimeMillis() - start;
 
